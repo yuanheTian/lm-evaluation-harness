@@ -4,7 +4,7 @@ import time
 import shutil
 
 # Define the dataset name and the local base directory to save
-DATASET_NAME = "cais/mmlu"
+DATASET_NAME = "GBaker/MedQA-USMLE-4-options-hf"
 BASE_SAVE_DIR = os.path.join("./data", DATASET_NAME)
 
 # Ensure base directory exists

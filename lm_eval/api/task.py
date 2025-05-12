@@ -23,6 +23,7 @@ from typing import (
 import datasets
 import numpy as np
 from tqdm import tqdm
+import os, glob
 
 from lm_eval import utils
 from lm_eval.api import samplers
@@ -988,11 +989,28 @@ class ConfigurableTask(Task):
                 **(self.config.metadata or {}), **(self.config.dataset_kwargs or {})
             )
         else:
-            self.dataset = datasets.load_dataset(
-                path=self.DATASET_PATH,
-                name=self.DATASET_NAME,
-                **dataset_kwargs if dataset_kwargs is not None else {},
-            )
+            # self.dataset = datasets.load_dataset(
+            #     path=self.DATASET_PATH,
+            #     name=self.DATASET_NAME,
+            #     **dataset_kwargs if dataset_kwargs is not None else {},
+            # )
+            # self.dataset = datasets.load_dataset(
+            #     path=os.path.join(self.DATASET_PATH, self.DATASET_NAME),
+            #     **dataset_kwargs if dataset_kwargs is not None else {},
+            # )
+            if self.DATASET_NAME is not None:
+                category_dir = os.path.join(self.DATASET_PATH, self.DATASET_NAME)
+            else:
+                category_dir = os.path.join(self.DATASET_PATH, 'default')
+            data_files = {}
+            for entry in sorted(os.listdir(category_dir)):
+                split_dir = os.path.join(category_dir, entry)
+                if os.path.isdir(split_dir):
+                    files = glob.glob(os.path.join(split_dir, "*.arrow"))
+                    if files:
+                        data_files[entry] = files
+            # 用 Arrow loader 并保持 split 名称
+            self.dataset = datasets.load_dataset("arrow", data_files=data_files)
 
     def has_training_docs(self) -> bool:
         if self.config.training_split is not None:
@@ -1290,6 +1308,7 @@ class ConfigurableTask(Task):
                 # else:
                 return doc[doc_to_text]
             else:
+                # import pdb; pdb.set_trace()
                 text_string = utils.apply_template(doc_to_text, doc)
                 if text_string.isdigit() and self._config.doc_to_choice is not None:
                     return ast.literal_eval(text_string)
