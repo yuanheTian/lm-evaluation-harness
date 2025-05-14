@@ -1,48 +1,46 @@
-from datasets import load_dataset, get_dataset_config_names, DownloadMode
 import os
+
+# —— 新增 ——
+# 指定 HF 镜像源
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+
+from datasets import (
+    get_dataset_config_names,
+    load_dataset,
+    DownloadMode,
+)
 import time
 import shutil
 
-# Define the dataset name and the local base directory to save
-DATASET_NAME = "GBaker/MedQA-USMLE-4-options-hf"
-BASE_SAVE_DIR = os.path.join("./data", DATASET_NAME)
+# Define the dataset and base save directory
+DATASET_NAME = "openai/gsm8k"
+configs = ['main', 'socratic']
+BASE_SAVE_DIR = DATASET_NAME
 
-# Ensure base directory exists
-os.makedirs(BASE_SAVE_DIR, exist_ok=True)
+if os.path.exists(BASE_SAVE_DIR):
+    shutil.rmtree(BASE_SAVE_DIR)
 
-# Retrieve all configurations (subdirectories) of the dataset
-configs = get_dataset_config_names(DATASET_NAME)
-
+# Step 2: load every config into memory
+datasets_in_memory = {}
 for config in configs:
-    # Construct the local path matching Hugging Face structure
-    save_dir = os.path.join(BASE_SAVE_DIR, config)
-
-    # If directory exists and is non-empty, skip download
-    if os.path.isdir(save_dir) and os.listdir(save_dir):
-        print(f"Config '{config}' already downloaded at '{save_dir}', skipping.")
-        continue
-
-    # Otherwise, prepare directory
-    if os.path.isdir(save_dir):
-        shutil.rmtree(save_dir)
-    os.makedirs(save_dir, exist_ok=True)
-
-    # Wait for 1 second before processing next config
+    print(f"Loading config '{config}' into memory...")
+    ds = load_dataset(
+        DATASET_NAME,
+        config
+    )
+    datasets_in_memory[config] = ds
     time.sleep(1)
 
-    # Attempt to load dataset, retry with force redownload on failure
-    try:
-        dataset = load_dataset(DATASET_NAME, config)
-    except Exception as e:
-        print(f"Error loading config '{config}': {e}. Removing directory and retrying with force download.")
+# Step 3: save each loaded dataset to disk
+for config, ds in datasets_in_memory.items():
+    save_dir = os.path.join(BASE_SAVE_DIR, config)
+    if os.path.isdir(save_dir):
         shutil.rmtree(save_dir)
-        os.makedirs(save_dir, exist_ok=True)
-        dataset = load_dataset(DATASET_NAME, config, download_mode=DownloadMode.FORCE_REDOWNLOAD)
+    # os.makedirs(save_dir, exist_ok=True)
 
-    # Save the dataset to disk
     try:
-        dataset.save_to_disk(save_dir)
-        print(f"Saved config '{config}' to '{save_dir}'")
+        ds.save_to_disk(save_dir)
+        print(f"✔️  Saved '{config}' to '{save_dir}'")
     except Exception as e:
-        print(f"Error saving config '{config}' to '{save_dir}': {e}. Removing directory.")
+        print(f"  ❗ error saving '{config}': {e}")
         shutil.rmtree(save_dir)
