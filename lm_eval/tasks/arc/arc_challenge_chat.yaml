@@ -1,7 +1,7 @@
 tag:
   - llama
 task: arc_challenge_chat
-dataset_path: allenai/ai2_arc
+dataset_path: /media/ubuntu/data/share/hf-data/allenai/ai2_arc
 dataset_name: ARC-Challenge
 output_type: generate_until
 training_split: train
